@@ -88,50 +88,41 @@ func (t *BPTree) InsertItem(parent *BPNode, node *BPNode, key int64, value inter
 	//叶子结点，添加数据
 	if len(node.ChildNodes) < 1 {
 		node.InsertItem(key, value)
-	}
 
-	//结点分裂
-	nodeNew := t.splitNode(node)
-	if nodeNew != nil {
-		//若父结点不存在，则创建一个父节点
-		if parent == nil {
-			parent = NewNode(t.width)
-			parent.AddChildNode(node)
-			t.root = parent
-		}
-		//添加结点到父亲结点
-		parent.AddChildNode(nodeNew)
+	}
+	if len(node.Items) >= t.width {
+		//结点分裂
+		t.splitNode(parent, node)
+
 	}
 }
-func (t *BPTree) splitNode(node *BPNode) *BPNode {
-	if len(node.ChildNodes) > t.width {
-		//创建新结点
-		halfW := t.width/2 + 1
-		node2 := NewNode(t.width)
-		node2.ChildNodes = append(node2.ChildNodes, node.ChildNodes[halfW:len(node.ChildNodes)]...)
-		node2.MaxKey = node2.ChildNodes[len(node2.ChildNodes)-1].MaxKey
+func (t *BPTree) splitNode(parent, node *BPNode) {
 
-		//修改原结点数据
-		node.ChildNodes = node.ChildNodes[0:halfW]
-		node.MaxKey = node.ChildNodes[len(node.ChildNodes)-1].MaxKey
+	//创建新结点
+	halfW := t.width / 2
+	node2 := NewNode(t.width)
+	node2.Items = append(node2.Items, node.Items[halfW:len(node.Items)]...)
+	node2.MaxKey = node2.Items[len(node2.Items)-1].Key
 
-		return node2
-	} else if len(node.Items) > t.width {
-		//创建新结点
-		halfW := t.width/2 + 1
-		node2 := NewNode(t.width)
-		node2.Items = append(node2.Items, node.Items[halfW:len(node.Items)]...)
-		node2.MaxKey = node2.Items[len(node2.Items)-1].Key
+	//修改原结点数据
+	node.Next = node2
+	node.Items = node.Items[0:halfW]
+	node.MaxKey = node.Items[len(node.Items)-1].Key
 
-		//修改原结点数据
-		node.Next = node2
-		node.Items = node.Items[0:halfW]
-		node.MaxKey = node.Items[len(node.Items)-1].Key
+	//若父结点不存在，则创建一个父节点
+	if parent == nil {
+		parent = NewNode(t.width)
+		parent.AddChildNode(node)
 
-		return node2
+		parent.AddChildNode(node2)
+		parent.InsertItem(node2.Items[0].Key, nil)
+		t.root = parent
+	} else {
+		//添加结点到父亲结点
+		parent.AddChildNode(node2)
+		parent.InsertItem(node2.Items[0].Key, nil)
 	}
 
-	return nil
 }
 func (t *BPTree) Remove(key int64) {
 	t.mutex.Lock()

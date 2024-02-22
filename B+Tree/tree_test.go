@@ -37,3 +37,15 @@ func TestBPTRand(t *testing.T) {
 	data, _ := json.MarshalIndent(bpt.GetData(), "", "    ")
 	t.Log(string(data))
 }
+func TestBPT2(t *testing.T) {
+	bpt := NewBPTree(3)
+
+	for i := 1; i <= 10; i++ {
+		bpt.Set(int64(i), i)
+		data, _ := json.MarshalIndent(bpt.GetData(), "", "    ")
+		t.Log(string(data))
+	}
+
+	data, _ := json.MarshalIndent(bpt.GetData(), "", "    ")
+	t.Log(string(data))
+}
