@@ -20,14 +20,16 @@ func (item *BPItem) String() string {
 type BPNode struct {
 	MaxKey     int64
 	ChildNodes []*BPNode
-	Items      []BPItem
+	Items      []*BPItem
 	Next       *BPNode
+	Wight      int
 }
 
 func NewNode(width int) *BPNode {
 	var node = &BPNode{}
-	node.Items = make([]BPItem, width+1)
+	node.Items = make([]*BPItem, width+1)
 	node.Items = node.Items[0:0]
+	node.Wight = width
 	return node
 }
 
@@ -36,26 +38,26 @@ func (node *BPNode) InsertItem(key int64, value interface{}) {
 	item := BPItem{key, value}
 	num := len(node.Items)
 	if num < 1 {
-		node.Items = append(node.Items, item)
+		node.Items = append(node.Items, &item)
 		node.MaxKey = item.Key
 		return
 	} else if key < node.Items[0].Key {
-		node.Items = append([]BPItem{item}, node.Items...)
+		node.Items = append([]*BPItem{&item}, node.Items...)
 		return
 	} else if key > node.Items[num-1].Key {
-		node.Items = append(node.Items, item)
+		node.Items = append(node.Items, &item)
 		node.MaxKey = item.Key
 		return
 	}
 
 	for i := 0; i < num; i++ {
 		if node.Items[i].Key > key {
-			node.Items = append(node.Items, BPItem{})
+			node.Items = append(node.Items, &BPItem{})
 			copy(node.Items[i+1:], node.Items[i:])
-			node.Items[i] = item
+			node.Items[i] = &item
 			return
 		} else if node.Items[i].Key == key {
-			node.Items[i] = item //直接赋值，等于修改了
+			node.Items[i] = &item //直接赋值，等于修改了
 			return
 		}
 	}
@@ -83,6 +85,30 @@ func (node *BPNode) DeleteItem(key int64) bool {
 	}
 	return false
 }
+
+// IsLeafNode 判断是否是叶子节点
+func (node *BPNode) IsLeafNode() bool {
+	return len(node.ChildNodes) == 0
+}
+
+// IsNeedSplitNode 判断是否需要分裂 等于wight则需要分裂
+func (node *BPNode) IsNeedSplitNode() bool {
+	return len(node.Items) == node.Wight
+}
+
+// Split 对半items分裂node [0,half)  与 [half,len-1)
+func (node *BPNode) Split(parent *BPNode) (leftNode, rightNode *BPNode) {
+	leftNode.Items = make([]*BPItem, 0, node.Wight+1)  //加一是为了容纳多余的一个，回头会分裂
+	rightNode.Items = make([]*BPItem, 0, node.Wight+1) //加一是为了容纳多余的一个，回头会分裂
+
+	leftNode.Items = append(leftNode.Items, node.Items[0:node.Wight]...) //加入node的左半部分items
+	rightNode.Items = node.Items[node.Wight:]                            //加入node的右半部分items
+	//maxkey,node 去除
+	parent.ChildNodes = append(parent.ChildNodes, leftNode, rightNode)
+
+	return
+}
+
 func (node *BPNode) String() string {
 	res := ""
 	for i := 0; i < len(node.Items); i++ {

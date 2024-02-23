@@ -2,6 +2,7 @@ package BPTree
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"testing"
 )
@@ -48,4 +49,8 @@ func TestBPT2(t *testing.T) {
 
 	data, _ := json.MarshalIndent(bpt.GetData(), "", "    ")
 	t.Log(string(data))
+}
+func TestSlice(t *testing.T) {
+	slice := make([]int, 10)
+	fmt.Println(len(slice))
 }

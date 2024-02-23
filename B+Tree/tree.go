@@ -25,6 +25,23 @@ func NewBPTree(width int) *BPTree {
 	bt.halfW = (bt.width + 1) / 2
 	return bt
 }
+func (t *BPTree) Insert(lastNode *BPNode, key int64, value interface{}) {
+	nowNode := t.root
+	//找到叶子节点插入item
+	if nowNode.IsLeafNode() {
+		nowNode.InsertItem(key, value)
+
+	} else {
+		for i := 0; i < len(nowNode.Items); i++ {
+			if nowNode.Items[i].Key >= key {
+				t.Insert(nowNode, key, value)
+				break
+			}
+		}
+	}
+	//找到之后的处理
+
+}
 func (t *BPTree) GetData() map[int64]interface{} {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -78,6 +95,7 @@ func (t *BPTree) Set(key int64, value interface{}) {
 	t.InsertItem(nil, t.root, key, value)
 }
 func (t *BPTree) InsertItem(parent *BPNode, node *BPNode, key int64, value interface{}) {
+
 	for i := 0; i < len(node.ChildNodes); i++ {
 		if key <= node.ChildNodes[i].MaxKey || i == len(node.ChildNodes)-1 {
 			t.InsertItem(node, node.ChildNodes[i], key, value)
