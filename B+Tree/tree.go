@@ -1,6 +1,7 @@
 package BPTree
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -25,45 +26,51 @@ func NewBPTree(width int) *BPTree {
 	bt.halfW = (bt.width + 1) / 2
 	return bt
 }
-func (t *BPTree) Insert(lastNode *BPNode, key int64, value interface{}) {
-	nowNode := t.root
+func (t *BPTree) String() string {
+	return t.getTreeString(t.root)
+}
+func (t *BPTree) getTreeString(node *BPNode) (res string) {
+
+	now := node
+	for now != nil {
+		for i := 0; i < len(now.Items); i++ {
+			res += fmt.Sprintf(" %v ", now.Items[i].Key)
+		}
+		res += fmt.Sprintf("|")
+		now = now.Next
+	}
+	res += "\n"
+	if len(node.ChildNodes) != 0 {
+		res += t.getTreeString(node.ChildNodes[0])
+	}
+
+	return res
+
+}
+
+// Insert 递归插入
+func (t *BPTree) Insert(lastNode *BPNode, nowNode *BPNode, key int64, value interface{}) {
+
 	//找到叶子节点插入item
 	if nowNode.IsLeafNode() {
 		nowNode.InsertItem(key, value)
-
 	} else {
-		for i := 0; i < len(nowNode.Items); i++ {
-			if nowNode.Items[i].Key >= key {
-				t.Insert(nowNode, key, value)
+		for i := 0; i < len(nowNode.ChildNodes); i++ {
+			//从子节点中找到合适的
+			if key <= nowNode.ChildNodes[i].MaxKey || i == len(nowNode.ChildNodes)-1 {
+				t.Insert(nowNode, nowNode.ChildNodes[i], key, value)
 				break
 			}
 		}
+
 	}
 	//找到之后的处理
-
-}
-func (t *BPTree) GetData() map[int64]interface{} {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
-	return t.getData(t.root)
-}
-func (t *BPTree) getData(node *BPNode) map[int64]interface{} {
-	data := make(map[int64]interface{})
-	for {
-		if len(node.ChildNodes) > 0 {
-			for i := 0; i < len(node.ChildNodes); i++ {
-				data[node.ChildNodes[i].MaxKey] = t.getData(node.ChildNodes[i])
-			}
-			break
-		} else {
-			for i := 0; i < len(node.Items); i++ {
-				data[node.Items[i].Key] = node.Items[i].Val
-			}
-			break
+	if nowNode.IsNeedSplitNode() {
+		if res := nowNode.Split(lastNode); res != nil {
+			t.root = res
 		}
 	}
-	return data
+
 }
 func (t *BPTree) Get(key int64) interface{} {
 	t.mutex.Lock()
@@ -88,59 +95,6 @@ func (t *BPTree) Get(key int64) interface{} {
 		}
 	}
 	return nil
-}
-func (t *BPTree) Set(key int64, value interface{}) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	t.InsertItem(nil, t.root, key, value)
-}
-func (t *BPTree) InsertItem(parent *BPNode, node *BPNode, key int64, value interface{}) {
-
-	for i := 0; i < len(node.ChildNodes); i++ {
-		if key <= node.ChildNodes[i].MaxKey || i == len(node.ChildNodes)-1 {
-			t.InsertItem(node, node.ChildNodes[i], key, value)
-			break
-		}
-	}
-
-	//叶子结点，添加数据
-	if len(node.ChildNodes) < 1 {
-		node.InsertItem(key, value)
-
-	}
-	if len(node.Items) >= t.width {
-		//结点分裂
-		t.splitNode(parent, node)
-
-	}
-}
-func (t *BPTree) splitNode(parent, node *BPNode) {
-
-	//创建新结点
-	halfW := t.width / 2
-	node2 := NewNode(t.width)
-	node2.Items = append(node2.Items, node.Items[halfW:len(node.Items)]...)
-	node2.MaxKey = node2.Items[len(node2.Items)-1].Key
-
-	//修改原结点数据
-	node.Next = node2
-	node.Items = node.Items[0:halfW]
-	node.MaxKey = node.Items[len(node.Items)-1].Key
-
-	//若父结点不存在，则创建一个父节点
-	if parent == nil {
-		parent = NewNode(t.width)
-		parent.AddChildNode(node)
-
-		parent.AddChildNode(node2)
-		parent.InsertItem(node2.Items[0].Key, nil)
-		t.root = parent
-	} else {
-		//添加结点到父亲结点
-		parent.AddChildNode(node2)
-		parent.InsertItem(node2.Items[0].Key, nil)
-	}
-
 }
 func (t *BPTree) Remove(key int64) {
 	t.mutex.Lock()
@@ -236,7 +190,7 @@ func (t *BPTree) itemMoveOrMerge(parent *BPNode, node *BPNode) {
 		item := node1.Items[len(node1.Items)-1]
 		node1.Items = node1.Items[0 : len(node1.Items)-1]
 		node1.MaxKey = node1.Items[len(node1.Items)-1].Key
-		node.Items = append([]BPItem{item}, node.Items...)
+		node.Items = append([]*BPItem{item}, node.Items...)
 		return
 	}
 

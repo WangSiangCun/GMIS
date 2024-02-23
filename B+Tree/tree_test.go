@@ -1,56 +1,17 @@
 package BPTree
 
 import (
-	"encoding/json"
 	"fmt"
-	"math/rand"
 	"testing"
 )
 
-func TestBPT(t *testing.T) {
-	bpt := NewBPTree(4)
-
-	bpt.Set(10, 1)
-	bpt.Set(23, 1)
-	bpt.Set(33, 1)
-	bpt.Set(35, 1)
-	bpt.Set(15, 1)
-
-	bpt.Remove(23)
-
-	t.Log(bpt.Get(10))
-	t.Log(bpt.Get(15))
-	t.Log(bpt.Get(20))
-
-	data, _ := json.MarshalIndent(bpt.GetData(), "", "    ")
-	t.Log(string(data))
-}
-
-func TestBPTRand(t *testing.T) {
+func TestBPTree_Insert(t *testing.T) {
 	bpt := NewBPTree(3)
+	for i := 1; i <= 1000000; i++ {
+		bpt.Insert(nil, bpt.root, int64(i), i)
+		//fmt.Println(bpt.String())
 
-	for i := 0; i < 120; i++ {
-		key := rand.Int()%20 + 1
-		t.Log(key)
-		bpt.Set(int64(key), key)
 	}
+	fmt.Println(bpt.String())
 
-	data, _ := json.MarshalIndent(bpt.GetData(), "", "    ")
-	t.Log(string(data))
-}
-func TestBPT2(t *testing.T) {
-	bpt := NewBPTree(3)
-
-	for i := 1; i <= 10; i++ {
-		bpt.Set(int64(i), i)
-		data, _ := json.MarshalIndent(bpt.GetData(), "", "    ")
-		t.Log(string(data))
-	}
-
-	data, _ := json.MarshalIndent(bpt.GetData(), "", "    ")
-	t.Log(string(data))
-}
-func TestSlice(t *testing.T) {
-	slice := make([]int, 10)
-	fmt.Println(len(slice))
 }

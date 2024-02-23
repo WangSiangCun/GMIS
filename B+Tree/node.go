@@ -22,13 +22,13 @@ type BPNode struct {
 	ChildNodes []*BPNode
 	Items      []*BPItem
 	Next       *BPNode
+	Pre        *BPNode
 	Wight      int
 }
 
 func NewNode(width int) *BPNode {
 	var node = &BPNode{}
-	node.Items = make([]*BPItem, width+1)
-	node.Items = node.Items[0:0]
+	node.Items = make([]*BPItem, 0, width+1)
 	node.Wight = width
 	return node
 }
@@ -96,25 +96,56 @@ func (node *BPNode) IsNeedSplitNode() bool {
 	return len(node.Items) == node.Wight
 }
 
-// Split 对半items分裂node [0,half)  与 [half,len-1)
-func (node *BPNode) Split(parent *BPNode) (leftNode, rightNode *BPNode) {
+// Split 对半items分裂node [0,half)  与 [half,len-1) 如果parent为空，会返回一个node，否则为nil
+func (node *BPNode) Split(parent *BPNode) *BPNode {
+	leftNode, rightNode := &BPNode{}, &BPNode{}
 	leftNode.Items = make([]*BPItem, 0, node.Wight+1)  //加一是为了容纳多余的一个，回头会分裂
 	rightNode.Items = make([]*BPItem, 0, node.Wight+1) //加一是为了容纳多余的一个，回头会分裂
+	leftNode.Wight = node.Wight
+	rightNode.Wight = node.Wight
 
-	leftNode.Items = append(leftNode.Items, node.Items[0:node.Wight]...) //加入node的左半部分items
-	rightNode.Items = node.Items[node.Wight:]                            //加入node的右半部分items
-	//maxkey,node 去除
-	parent.ChildNodes = append(parent.ChildNodes, leftNode, rightNode)
+	leftNode.Items = append(leftNode.Items, node.Items[0:node.Wight/2]...)                          //加入node的左半部分items
+	leftNode.ChildNodes = append(leftNode.ChildNodes, node.ChildNodes[0:len(node.ChildNodes)/2]...) //把node的孩子节点的左半部分给leftNode
+	leftNode.MaxKey = leftNode.Items[len(leftNode.Items)-1].Key                                     //维护MaxKey
+	if node.IsLeafNode() {
+		rightNode.Items = append(rightNode.Items, node.Items[node.Wight/2:]...)                          //加入node的右半部分items
+		rightNode.ChildNodes = append(rightNode.ChildNodes, node.ChildNodes[len(node.ChildNodes)/2:]...) //把node的孩子节点的右半部分给rightNode
+		rightNode.MaxKey = rightNode.Items[len(rightNode.Items)-1].Key
+	} else {
+		//只有叶子节点才会带着Wight/2，非叶子节点中间的item移到父节点，因为叶子节点是带数据的
+		rightNode.Items = append(rightNode.Items, node.Items[node.Wight/2+1:]...)                        //加入node的右半部分items
+		rightNode.ChildNodes = append(rightNode.ChildNodes, node.ChildNodes[len(node.ChildNodes)/2:]...) //把node的孩子节点的右半部分给rightNode
+		rightNode.MaxKey = rightNode.Items[len(rightNode.Items)-1].Key
+	}
+	//维护MaxKey
 
-	return
+	leftNode.Next = rightNode //双向链接
+	rightNode.Pre = leftNode
+
+	if parent != nil {
+		parent.InsertItem(node.Items[node.Wight/2].Key, nil)               //将正中间的item加入到parent的items
+		parent.DeleteChildNode(node)                                       //删去parent的node
+		parent.ChildNodes = append(parent.ChildNodes, leftNode, rightNode) //把分好的左右节点给parent
+		//之前链接的双向节点需要段龛
+		pre := node.Pre
+		pre.Next = leftNode
+		leftNode.Pre = pre
+		return nil
+	} else {
+		root := NewNode(node.Wight)
+		root.InsertItem(node.Items[node.Wight/2].Key, nil)
+		root.ChildNodes = append(root.ChildNodes, leftNode, rightNode)
+
+		return root
+	}
 }
 
 func (node *BPNode) String() string {
 	res := ""
 	for i := 0; i < len(node.Items); i++ {
-		res += fmt.Sprintf("%v-%v  ", i, node.Items[i].String())
+		res += fmt.Sprintf("%v-%v ", i, node.Items[i].String())
 	}
-	res += fmt.Sprintf("MaxKey:%v ChildNodes:%v Next:%v \n", node.MaxKey, node.ChildNodes, node.Next)
+	res += fmt.Sprintf("MK:%v CN:%v N:%v \n", node.MaxKey, node.ChildNodes, node.Next)
 	return res
 }
 
